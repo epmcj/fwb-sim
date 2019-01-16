@@ -13,16 +13,20 @@
 ##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
 ###############################################################################
 class EventCode:
-    MSG_RECV  = 0
-    MSG_SEND  = 2
-    NODE_CALL = 3
+    TX_START   = 0
+    TX_FINISH  = 1
+    NODE_CALL  = 2
+    NODE_SLEEP = 3
 
 class EventGenerator:
-    def create_call_event(time, addr):
-        return (time, EventCode.NODE_CALL, addr)
+    def create_node_call_event(time, nodeid):
+        return (time, EventCode.NODE_CALL, nodeid)
 
-    def create_send_event(time,  msg):
-        return (time, EventCode.MSG_SEND, msg)
+    def create_node_sleep_event(time, nodeid):
+        return (time, EventCode.NODE_SLEEP, nodeid)
 
-    def create_recv_event(time, addr, msg):
-        return (time, EventCode.MSG_RECV, addr, msg)
+    def create_tx_start_event(time, msg):
+        return (time, EventCode.TX_START, msg)
+
+    def create_tx_finish_event(time, txid):
+        return (time, EventCode.TX_FINISH, txid)

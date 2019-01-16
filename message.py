@@ -21,5 +21,4 @@ class Message:
         return 1024
 
     def __str__(self):
-        return 'Message from: ' + str(self.src) \
-                + ' to ' + str(self.dst)
+        return "Message from: " + str(self.src) + " to " + str(self.dst)

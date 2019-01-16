@@ -14,9 +14,8 @@
 
 import operator
 import random
+from radios import Radio
 from math   import floor, sqrt, pi, sin, cos
-from modens import AcousticModem as AM, OpticalModem as OM
-from channels import RFChannel
 
 INFINITY = float("inf")
 
@@ -25,9 +24,9 @@ def distance(a, b):
     c = map(lambda x: x ** 2, c)
     return sqrt(sum(c))
 
-def estimate_transmission(msg, txRate, channel, txPowerConsumption):
+def estimate_transmission(msg, radio):
     # Estimate the energy and the time required for a transmission to happen.
-    assert type(channel) is RFChannel
-    time   = len(msg) / (txRate * channel.speedup)
-    energy = time * txPowerConsumption
+    assert issubclass(type(radio), Radio)
+    time   = len(msg) / radio.txRate
+    energy = time * radio.txPowerConsumption
     return time, energy

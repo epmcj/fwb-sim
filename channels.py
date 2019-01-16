@@ -12,6 +12,6 @@
 ###############################################################################
 
 class RFChannel:
-    def __init__(self, alpha, speedup)
-        self.alpha   = alpha
-        self.speedup = speedup
+    def __init__(self, alpha, noise):
+        self.alpha = alpha
+        self.noise = noise

@@ -14,30 +14,32 @@ from clock import Clock
 
 class Node:
     # basic
-    MAX_TXS       = 3
-    sinkNodesAddr = [1]
-    basicPayload  = []
+    # MAX_TXS       = 3
+    # sinkNodesAddr = [1]
+    # basicPayload  = []
 
-    def __init__(self, addr, x, y, energy, clock=None, slotSize=0, numSlots=0, 
+    def __init__(self, id, x, y, energy, isSink=False, clock=None, radio=None,
                  verbose=False):
         assert type(clock) is Clock or clock is None, "Need a clock object"
-        self.addr     = addr
-        self.isSink   = addr in self.sinkNodesAddr
+        self.verbose  = verbose
+        self.id       = id
+        self.isSink   = isSink
         self.position = [x, y] 
         self.clock    = clock
+        self.radio    = radio
         # for TDMA
-        self.round    = 0
-        self.slotSize = slotSize
-        self.numSlots = numSlots
-        self.endSlot  = 0
-        self.nextSlot = slotSize * (addr - 1)
-        self.verbose  = verbose
+        self.slots     = []
+        self.sloti     = 0
+        self.slotSize  = 0
+        self.nextSlot  = 0
+        self.slotEnd   = 0
+        self.frameTime = 0
         # energy related
         self.maxEnergy = energy
         self.energy    = energy
         # for messages
         self.inbox         = []
-        self.outbox        = [] # pair [msg, number of transmissions]
+        self.outbox        = []
         self.msgsLostCount = 0
         self.msgsLostLimit = 5
         # for statistics
@@ -55,34 +57,33 @@ class Node:
         self.position[0] = newX
         self.position[1] = newY
 
+    def set_id(self, newid):
+        self.id = newid
+
     def set_clock_src(self, clock):
         self.clock = clock
+
+    def set_frame_time(self, frameTime):
+        self.frameTime = frameTime
+
+    def set_slot_size(self, slotSize):
+        assert (slotSize > 0), "Time slot can not be <= 0"
+        self.slotSize = slotSize
 
     def set_verbose(self, verbose):
         self.verbose = verbose
 
+    def add_slot(self, newSlot):
+        self.slots.append(newSlot)
+        self.slots.sort()
+
+    def update_next_slot(self):
+        self.nextSlot = self.slots[self.sloti]
+        self.sloti = (self.sloti + 1) % len(self.slots)
+
     def recharge(self, energy):
         self.energy += energy
         self.energy = min(self.energy, self.maxEnergy)
-
-    def update_time_slot_size(self, newSize):
-        assert newSize > 0, "Time slot can not be <= 0"
-        if self.verbose:
-            print("Updating node " + str(self.addr) + " time slot size from " +\
-                  str(self.slotSize) + " to " + str(newSize))
-        self.slotSize = newSize
-        self.nextSlot = self.round * newSize * self.numSlots + \
-                        newSize * (self.addr - 1)
-
-    def update_num_time_slots(self, numSlots):
-        assert numSlots > 0, "The number of slots can not be <= 0"
-        self.numSlots = numSlots
-
-    def update_tdma_info(self):
-        self.round    += 1
-        self.currSlot  = self.nextSlot
-        self.endSlot   = self.currSlot + self.slotSize
-        self.nextSlot += self.slotSize * self.numSlots
 
     def get_outbox_len(self):
         return len(self.outbox)

@@ -13,11 +13,14 @@ from tools import INFINITY
 
 class Clock:
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.__currTime = 0
-        self.nextCall = INFINITY
-        self.lastCall = INFINITY
-        self.interval = 0
-        self.routine = None
+        self.nextCall   = INFINITY
+        self.lastCall   = INFINITY
+        self.interval   = 0
+        self.routine    = None
 
     def run(self, time):
         self.__currTime = self.__currTime + time
