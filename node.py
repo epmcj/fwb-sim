@@ -29,9 +29,8 @@ class Node:
         self.radio    = radio
         # for TDMA
         self.slots     = []
-        self.sloti     = 0
+        self.sloti     = None
         self.slotSize  = 0
-        self.nextSlot  = 0
         self.slotEnd   = 0
         self.frameTime = 0
         # energy related
@@ -73,20 +72,31 @@ class Node:
     def set_verbose(self, verbose):
         self.verbose = verbose
 
+    def get_outbox_len(self):
+        return len(self.outbox)
+
+    def get_next_slot(self):
+        # should verify for slots?
+        return self.slots[self.sloti]
+
     def add_slot(self, newSlot):
         self.slots.append(newSlot)
         self.slots.sort()
+    
+    def start_tdma_system(self):
+        assert (self.slotSize != 0), "Slot size can not be zero"
+        if len(self.slots) == 0:
+            print("Warning: Node {} has no slots".format(self.id))
+        else:
+            self.sloti = 0
 
     def update_next_slot(self):
-        self.nextSlot = self.slots[self.sloti]
+        self.slots[self.sloti] += self.frameTime
         self.sloti = (self.sloti + 1) % len(self.slots)
 
     def recharge(self, energy):
         self.energy += energy
         self.energy = min(self.energy, self.maxEnergy)
-
-    def get_outbox_len(self):
-        return len(self.outbox)
 
     def execute(self):
         raise NotImplementedError
@@ -95,4 +105,7 @@ class Node:
         raise NotImplementedError
     
     def recv_msg(self, recvMsg):
+        raise NotImplementedError
+
+    def consume_energy(self, time):
         raise NotImplementedError

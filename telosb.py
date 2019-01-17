@@ -50,20 +50,19 @@ class TelosB(Node):
 
     def execute(self):
         currTime = self.clock.read()
-        if currTime == self.nextSlot:
-            self.slotEnd = self.nextSlot + self.slotSize
+        if currTime == self.get_next_slot():
+            # slot ends early because of the guard time
+            self.slotEnd = self.get_next_slot() + (self.slotSize * 0.95)
             self.update_next_slot()
-    # VERIFICAR FIM DO SLOT
-        if not self.isSink:
-            # if the node has received new messages, then it put them in the 
-            # outbox to send them
+        if (currTime < self.slotEnd) and (not self.isSink):
+            # send the messages to its parent
             if len(self.outbox) != 0:
                 msg = self.outbox.pop(0)
                 self.sentMsgsCounter += 1
+                self.set_tx_mode()
                 return EG.create_tx_start_event(currTime, msg)
-        return EG.create_node_sleep_event(currTime, self.id)
-
-            
+        self.set_rx_mode()
+        return EG.create_node_sleep_event(currTime, self.id)            
 
     def collect_data(self):
         # if the node is not a sink, then it adds a new message to the outbox

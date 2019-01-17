@@ -12,7 +12,7 @@
 
 class Radio:
     def __init__(self, txPower, txRate, txPowerConsumption, rxPowerConsumption, 
-                 isOn=False)
+                 isOn=False):
         self.txPowerConsumption = txPowerConsumption
         self.rxPowerConsumption = rxPowerConsumption
         self.txPower = txPower
@@ -49,6 +49,6 @@ class CC2420Radio(Radio):
 
     def set_tx_power(self, txPower):
         assert txPower <= CC2420Radio.maxTxPower and \
-               txPower >= CC2420Radio.minTxPower, 
+               txPower >= CC2420Radio.minTxPower, \
                "Radio power must be between -24 and 0 dB"
         self.txPower = txPower

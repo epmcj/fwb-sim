@@ -13,11 +13,9 @@
 ##                                                                           ##
 ##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
 ###############################################################################
-from node import Node
+from node       import Node
 from event_mngr import EventManager
 from sim_events import EventGenerator as EG, EventCode
-from message    import *
-from modens     import AcousticModem as AM, OpticalModem as OM
 from clock      import Clock
 from channels   import RFChannel
 import tools
@@ -34,7 +32,7 @@ class Simulator:
         self.childOf  = []
         # for fwb slot attribution
         self.nodeSlot = []
-        self.channel  = None
+        self.bws      = []  # bandwidths available
         # application parameters
         self.appStart    = tools.INFINITY
         self.appInterval = tools.INFINITY
@@ -43,6 +41,7 @@ class Simulator:
         self.clock   = Clock()
         self.evMngr  = EventManager()
         self.verbose = verbose
+        self.channel = None
         # node control
         self.nodes = []
         # transmission control
@@ -60,7 +59,10 @@ class Simulator:
         node.set_clock_src(self.clock)
         node.set_verbose(self.verbose)
         self.nodes.append(node)
-        self.node_channel.append(0)
+    
+    def add_nodes(self, nodes):
+        for node in nodes:
+            self.add_node(node)
 
     def set_slot_size(self, slotSize):
         self.slotSize = slotSize
@@ -134,12 +136,13 @@ class Simulator:
         # distributing time slots
         self.frameTime = self.schedulingSize * self.slotSize
         for i in range(len(self.nodeSlot)):
-            self.set_slot_size(self.slotSize)
-            self.set_frame_time(self.frameTime)
+            self.nodes[i].set_slot_size(self.slotSize)
+            self.nodes[i].set_frame_time(self.frameTime)
             for slot in self.nodeSlot[i]:
                 ntime = self.clock.read() + (slot * self.slotSize)
                 self.evMngr.insert(EG.create_call_event(ntime, i))
                 self.nodes[i].add_slot(ntime)
+            self.nodes[i].start_tdma_system()
 
         # distributing bandwidths [...]
 
