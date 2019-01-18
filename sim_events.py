@@ -13,20 +13,45 @@
 ##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
 ###############################################################################
 class EventCode:
-    TX_START   = 0
-    TX_FINISH  = 1
-    NODE_CALL  = 2
-    NODE_SLEEP = 3
+    TX_START     = 0
+    TX_FINISH    = 1
+    NODE_CALL    = 2
+    NODE_RESUME  = 3
+    NODE_SLEEP   = 4
+    COLLECT_DATA = 5
+    STOP_SIM     = 6
 
 class EventGenerator:
+    # Events are composed by (time, event code, event info)
     def create_node_call_event(time, nodeid):
-        return (time, EventCode.NODE_CALL, nodeid)
+        return [time, EventCode.NODE_CALL, nodeid]
+
+    def create_node_resume_event(time, nodeid):
+        return [time, EventCode.NODE_RESUME, nodeid]
 
     def create_node_sleep_event(time, nodeid):
-        return (time, EventCode.NODE_SLEEP, nodeid)
+        return [time, EventCode.NODE_SLEEP, nodeid]
 
     def create_tx_start_event(time, msg):
-        return (time, EventCode.TX_START, msg)
+        return [time, EventCode.TX_START, msg]
 
     def create_tx_finish_event(time, txid):
-        return (time, EventCode.TX_FINISH, txid)
+        return [time, EventCode.TX_FINISH, txid]
+
+    def create_data_collection_event(time):
+        return [time, EventCode.COLLECT_DATA, None] # no information
+
+    def create_stop_simulation_event(time):
+        return [time, EventCode.STOP_SIM, None] # no information
+
+    
+    # changes event object to reduce memory usage. only fields != None are 
+    # changed
+    def change_event(event, newTime=None, newCode=None, newInfo=None):
+        if newTime != None:
+            event[0] = newTime
+        if newCode != None:
+            event[1] = newCode
+        if newInfo != None:
+            event[2] = newInfo
+        return event

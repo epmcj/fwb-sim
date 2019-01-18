@@ -52,5 +52,11 @@ class Clock:
         self.lastCall = stop
         self.routine  = call
 
+    def set_periodic_temp(self, call, interval, stop = INFINITY):
+        self.interval = interval
+        self.lastCall = stop
+        self.routine  = call
+        self.nextCall = self.__currTime + interval
+
     def alarm_is_on(self):
         return self.nextCall is not INFINITY

@@ -18,6 +18,8 @@ from event_mngr import EventManager
 from sim_events import EventGenerator as EG, EventCode
 from clock      import Clock
 from channels   import RFChannel
+from fwb        import FWB
+from math       import log10
 import tools
 
 class Simulator:
@@ -31,19 +33,21 @@ class Simulator:
         self.parentOf = []
         self.childOf  = []
         # for fwb slot attribution
-        self.nodeSlot = []
-        self.bws      = []  # bandwidths available
+        self.nodeSlots = None
+        self.nodeBW    = None
+        self.bws       = []  # bandwidths available
         # application parameters
-        self.appStart    = tools.INFINITY
-        self.appInterval = tools.INFINITY
-        self.appStop     = tools.INFINITY 
+        self.dcStart    = tools.INFINITY
+        self.dcInterval = tools.INFINITY
+        self.dcStop     = tools.INFINITY 
         # control
-        self.clock   = Clock()
-        self.evMngr  = EventManager()
-        self.verbose = verbose
-        self.channel = None
+        self.verbose   = verbose
+        self.channel   = None
+        self.clock     = Clock()
+        self.evMngr    = EventManager()
         # node control
-        self.nodes = []
+        self.nodes  = []
+        self.sinkid = None  # only one sink node in the network
         # transmission control
         self.txs = [] # composed of [tx_id, [src, msg, power], success]
         # statistics
@@ -51,28 +55,33 @@ class Simulator:
         self.finishedTxs = 0
         self.failedRxs   = 0
         self.succeedRxs  = 0
+        self.numDCollect = 0 # number of data collections
 
     def add_node(self, node):
-        #
         assert issubclass(type(node), Node)
         node.set_id(len(self.nodes))
         node.set_clock_src(self.clock)
         node.set_verbose(self.verbose)
         self.nodes.append(node)
+        if node.isSink:
+            self.sinkid = node.id
     
     def add_nodes(self, nodes):
         for node in nodes:
             self.add_node(node)
 
+    def set_available_bws(self, bws):
+        self.bws = bws
+        self.bws.sort()
+
     def set_slot_size(self, slotSize):
         self.slotSize = slotSize
 
-    def set_channels_info(self, alpha, ambNoise, channelSpeedups):
+    def set_channel_info(self, alpha, ambNoise):
         self.channel = RFChannel(alpha, ambNoise)
 
     def set_network_topology(self, relations):
         # relations must be a (parent, child) tuple list 
-        # assert self.numNodes is not 0
         assert len(self.nodes) is not 0, "No nodes yet"
         numNodes = len(self.nodes)
         self.parentOf = [ [] for i in range(numNodes) ]
@@ -89,17 +98,16 @@ class Simulator:
                 print("Node {} is parent of ".format(i) + \
                       "nodes {}".format(self.parentOf[i]))
 
-
-    def set_data_collection(self, appStart, appInterval, appStop=tools.INFINITY):
-        self.appStart    = appStart
-        self.appInterval = appInterval
-        self.appStop     = appStop
+    def set_data_collection(self, dcStart, dcInterval, dcStop=tools.INFINITY):
+        self.dcStart    = dcStart
+        self.dcInterval = dcInterval
+        self.dcStop     = dcStop
 
     def get_num_nodes(self):
         return len(self.nodes.values())
 
     def get_num_txs(self):
-        return self.finishedTxs()
+        return self.finishedTxs
 
     def get_num_rxs_successes(self):
         return self.succeedRxs
@@ -108,19 +116,20 @@ class Simulator:
         return self.failedRxs
 
     def do_data_collection(self):
-        # Method to feed the routing algorithm with application messages.
-        for node in self.nodes.values():
+        # Method to generate new messages for the nodes.
+        for node in self.nodes:
             if node.energy > 0 and node.isSink is False:
                 node.collect_data()
+        self.numDCollect += 1
 
-    def start(self, stopExec):
-        assert (stopExec > 0), "Execution time must be > 0" 
+    def run(self, framesToSim):
+        assert (framesToSim > 0), "Execution time must be > 0" 
         assert (self.slotSize > 0), "TDMA time slots must be > 0" 
         assert (len(self.nodes) is not 0), "Missing nodes" 
-        assert (self.appStart is not tools.INFINITY), "Missing app start time"
-        assert (self.appInterval is not tools.INFINITY), "Missing app "+ \
-                                                         "interval time"
-        assert (self.appStop > self.appStart), "Stop time must be > start time"
+        assert (self.dcStart is not tools.INFINITY), "Missing app start time"
+        assert (self.dcInterval is not tools.INFINITY), "Missing app "+ \
+                                                        "interval time"
+        assert (self.dcStop > self.dcStart), "Stop time must be > start time"
         assert (self.channel != None), "Missing transmission channel"
 
         # initialization
@@ -131,69 +140,98 @@ class Simulator:
         self.clock.reset()
         self.evMngr.reset()
 
-        self.do_schedule()
+        # distributing topology information
+        for nid in range(len(self.nodes)):
+            if len(self.childOf[nid]) != 0:
+                self.nodes[nid].set_parent(self.childOf[nid][0])
+            self.nodes[nid].set_children(self.parentOf[nid])
 
         # distributing time slots
-        self.frameTime = self.schedulingSize * self.slotSize
-        for i in range(len(self.nodeSlot)):
+        self.do_schedule()
+        for i in range(len(self.nodeSlots)):
             self.nodes[i].set_slot_size(self.slotSize)
             self.nodes[i].set_frame_time(self.frameTime)
-            for slot in self.nodeSlot[i]:
+            for slot in self.nodeSlots[i]:
                 ntime = self.clock.read() + (slot * self.slotSize)
-                self.evMngr.insert(EG.create_call_event(ntime, i))
+                self.evMngr.insert(EG.create_node_call_event(ntime, i))
                 self.nodes[i].add_slot(ntime)
             self.nodes[i].start_tdma_system()
 
         # distributing bandwidths [...]
 
+        # setting alarm to start the data collection process
+        # self.clock.set_alarm(self.do_data_collection, self.dcStart, \
+        #                      self.dcInterval, self.dcStop)
+        self.dcInterval = self.frameTime
+        self.clock.set_periodic_temp(self.do_data_collection, self.dcInterval, \
+                                     self.dcStop)
+
+        simTime = framesToSim * self.frameTime
+        self.evMngr.insert(EG.create_stop_simulation_event(simTime))
+
         print("Simulation started")
+        print(self.clock.read())
         while len(self.evMngr) != 0:
             event = self.evMngr.get_next()
-            eTime = event[0]
-            if eTime > self.clock.read():
-                raise Exception("Can not go to the past!")
-            self.clock.force_time(eTime) # adjusting time for event
-            if eTime >= self.nextFrameStart:
+            etime = event[0]
+            if etime < self.clock.read():
+                raise Exception("Can not go to the past! (" + \
+                                str(self.clock.read()) + " < " + \
+                                str(etime) + ")")
+            self.clock.force_time(etime) # adjusting time for event
+            if self.verbose:
+                print("curr time: {}".format(self.clock.read()))
+            if etime >= self.nextFrameStart:
                 self.framesExecuted += 1
                 self.nextFrameStart += self.frameTime
             ecode = event[1]
             einfo = event[2]
-            if ecode is EventCode.NODE_CALL:
+
+            if ecode is EventCode.NODE_CALL or ecode is EventCode.NODE_RESUME:
                 # einfo = node id
+                if ecode is EventCode.NODE_CALL:
+                    # changing for the next frame
+                    ntime = etime + self.frameTime
+                    self.evMngr.insert(EG.change_event(event, newTime=ntime))
+                    
                 if self.verbose:
                     print("Node " + str(einfo) + " is executing")
+
                 newEvent = self.nodes[einfo].execute()
                 if newEvent[1] is EventCode.TX_START:
                     # node will transmit a message
                     msg = newEvent[2]
                     self.__handle_tx_request(einfo, msg)
                 elif newEvent[1] is EventCode.NODE_SLEEP:
-                    # node will sleep until its next slot
-                    ntime = self.nextFrameStart + (self.nodeSlot[i] * \
-                            self.slotSize)
-                    self.evMngr.insert(EG.create_node_call_event(ntime, einfo))
+                    continue
                 else:
                     raise Exception("Bad event {} from node {}".format(
-                                        newEvent[1], einfo))
-                        
+                                        newEvent[1], einfo))   
+            
             elif ecode is EventCode.TX_FINISH:
                 # einfo = transmission id
                 if self.verbose:
                     print("TX " + str(einfo) + " is finishing")
                 self.__handle_tx_finish(einfo)
+            
+            elif ecode is EventCode.STOP_SIM:
+                break
+
             else:
                 raise Exception("Unknown event code " + str(ecode))
         print("Simulation finished")
 
     def __handle_tx_request(self, src, msg):
         # estimating transmission
+        if self.verbose:
+            print("TX from node " + str(src) + " will start")
         ttime, tenergy = tools.estimate_transmission(msg, self.nodes[src].radio)
         ftime = self.clock.read() + ttime
         # adding call node event (time is multiplied by 1.01 to assure it will 
         # called after the transmission was completed)
-        self.evMngr.insert(EG.create_call_event(ftime * 1.01, src))
+        self.evMngr.insert(EG.create_node_resume_event(ftime * 1.01, src))
         # evaluating transmissions
-        txid = self.startedTxs
+        txid   = self.startedTxs
         txInfo = [src, msg, self.nodes[src].radio.txPower]
         self.txs.append([txid, txInfo, True])
         self.startedTxs += 1
@@ -211,7 +249,7 @@ class Simulator:
                 if tsuccess:
                     msg = tinfo[1]
                     dst = msg.dst
-                    nodes[dst].recv_msg(msg)
+                    self.nodes[dst].recv_msg(msg)
                     self.succeedRxs += 1
                 else:
                     self.failedRxs += 1
@@ -227,7 +265,7 @@ class Simulator:
         i = 0
         for tid, tinfo, tsuccess in self.txs:
             src   = tinfo[0]
-            pos   = nodes[src].position
+            pos   = self.nodes[src].position
             power = tinfo[2]
             nodesTxs.append([src, pos, power])
             if tsuccess:
@@ -239,32 +277,56 @@ class Simulator:
             src   = tinfo[0]
             power = tinfo[2]
             dst   = tinfo[1].dst # from msg
-            spos  = nodes[src].position
-            dpos  = nodes[dst].position
+            spos  = self.nodes[src].position
+            dpos  = self.nodes[dst].position
             # calculating SINR
             dist   = tools.distance(spos, dpos)
-            sinr   = power / (dist) ** self.channel.alpha
+            sinr   = power / (dist ** self.channel.alpha)
             # calculating interference
-            interf = 0
+            inter = 0
             for isrc, ipos, ipower in nodesTxs:
                 if isrc != src:
                     dist = tools.distance(ipos, dpos)
-                    inter += ipower / (dist) ** self.channel.alpha
+                    print("power " + str(ipower))
+                    inter += ipower / (dist ** self.channel.alpha)
             # calculating final SINR and checking for zero division (when there 
             # is neither interference nor noise)
             if (inter + self.channel.noise) == 0:
-                sinr = floa("inf")
+                sinr = float("inf")
             else:
                 sinr = sinr / (self.channel.noise + inter)
+            print("SINR = {} ({}) from {} to {}".format(sinr, 10*log10(sinr), src, dst))
+            print("interference = {}".format(inter))
             # checking if the data can be decoded
             if sinr >= self.nodes[dst].radio.minSIR:
                 self.txs[i][2] = True
             else:
                 self.txs[i][2] = False
 
-
-    # schedule time slots
+    # schedule timeslots
     def do_schedule(self):
+        scheduler = FWB()
+        scheduler.set_number_of_nodes(len(self.nodes))
+        scheduler.set_parent_info(self.parentOf)
+        scheduler.set_sink_id(self.sinkid)
+        scheduler.set_available_bandwidths(self.bws)
+
+        scheduler.schedule()
+
+        self.nobeBW         = scheduler.get_bandwidth_schedule()
+        self.nodeSlots      = scheduler.get_slot_schedule()
+        self.schedulingSize = scheduler.get_slot_schedule_size()
+        self.frameTime      = self.schedulingSize * self.slotSize
+
+        print(self.schedulingSize)
+        print(self.nodeSlots)
+        print(self.frameTime)
+        
+        if self.nobeBW is None:
+            raise Exception("Failed to schedule the bandwidths")
+        if self.nodeSlots is None:
+            raise Exception("Failed to schedule the timeslots")
+
         return None
         
         

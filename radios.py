@@ -9,6 +9,7 @@
 ##                                                                           ##
 ##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
 ###############################################################################
+from math import log10
 
 class Radio:
     def __init__(self, txPower, txRate, txPowerConsumption, rxPowerConsumption, 
@@ -30,11 +31,11 @@ class CC2420Radio(Radio):
     # http://www.ti.com/lit/ds/symlink/cc2420.pdf
     txPowerConsumption = 0
     rxPowerConsumption = 0
-    maxTxPower         = 0      # dB
-    minTxPower         = -24    # dB
-    minSIR             = -3     # dB
-    txRange            = 30     # m (max indoor)
-    txRate             = 250e3  # 250 kbps
+    maxTxPower         = 10**(-3 + 0/10)  # W = 0 dBm
+    minTxPower         = 10**(-3 - 24/10) # W = -24 dBm
+    minSIR             = 10**(-3 - 94/10) # W = -94 dBm
+    txRange            = 30               # m (max indoor)
+    txRate             = 250e3            # 250 kbps
     
     def __init__(self, txPower):
         super(CC2420Radio, self).__init__(0,

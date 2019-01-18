@@ -9,7 +9,7 @@
 ##                                                                           ##
 ##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
 ###############################################################################
-
+from clock      import Clock
 from node       import Node
 from radios     import CC2420Radio
 from message    import Message
@@ -22,12 +22,12 @@ class TelosBMode:
     SLEEP = 3
 
 class TelosB(Node):
-    def __init__(self, id, x, y, energy, isSink, clock=None, slotSize=1, 
-                 numSlots=1, verbose=False):
-        super(TelosB, self).__init__(id, x, y, energy, clock, slotSize, 
-                                     numSlots)
+    def __init__(self, id, x, y, energy, isSink, slotSize=1, numSlots=1, 
+                 verbose=False):
+        super(TelosB, self).__init__(id, x, y, energy, isSink, Clock(), 
+                                     slotSize, numSlots)
         # node info
-        self.radio = CC2420Radio()
+        self.radio = CC2420Radio(CC2420Radio.maxTxPower)
         self.mode  = TelosBMode.IDLE
         # routing info
         self.parent   = None
@@ -44,6 +44,15 @@ class TelosB(Node):
     
     def set_sleep_mode(self):
         self.mode = TelosBMode.SLEEP
+
+    def set_tx_power(self, txPower):
+        self.radio.set_tx_power(txPower)
+
+    def set_parent(self, parent):
+        self.parent = parent
+
+    def set_children(self, children):
+        self.children = children
 
     def get_mode(self):
         return self.mode
