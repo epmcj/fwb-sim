@@ -43,12 +43,13 @@ def get_possible_interference_info(nodes, interferenceRange):
                     canInterWith[i].append(j)
     return canInterWith
 
-def generate_full_binary_tree_network(numLvls, maxRange, ipos=(0,0)):
+def generate_full_binary_tree_network(numLvls, maxRange, minRange=0, ipos=(0,0)):
     def add_next(nodes, isParentOf, basePos, lvlsRemaining, maxRange):
         pid = len(nodes) - 1
+        maxDistance = maxRange - minRange
         # up child
         ua = random.random() * (pi/2)
-        ud = random.random() * maxRange
+        ud = minRange + random.random() * maxDistance
         ux = basePos[0] + ud * cos(ua)
         uy = basePos[1] + ud * sin(ua)
         nodes.append((ux, uy))                 # adding node to list
@@ -58,7 +59,7 @@ def generate_full_binary_tree_network(numLvls, maxRange, ipos=(0,0)):
             add_next(nodes, isParentOf, (ux, uy), lvlsRemaining - 1, maxRange)
         # down child
         da = random.random() * (pi/2) * (-1)
-        dd = random.random() * maxRange
+        dd = minRange + random.random() * maxDistance
         dx = basePos[0] + dd * cos(da)
         dy = basePos[1] + dd * sin(da)
         nodes.append((dx, dy))                 # adding node to list

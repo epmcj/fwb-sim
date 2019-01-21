@@ -27,6 +27,9 @@ class EventManager:
     def __len__(self):
         return len(self.heap)
 
+    def print(self):
+        print(self.heap)
+
     def reset(self):
         self.heap = []
 

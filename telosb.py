@@ -32,6 +32,8 @@ class TelosB(Node):
         # routing info
         self.parent   = None
         self.children = []
+        # statistics (for sink)
+        self.latencies = []
 
     def set_tx_mode(self):
         self.mode = TelosBMode.TX
@@ -78,7 +80,7 @@ class TelosB(Node):
         if not self.isSink:
             if self.parent is None:
                 raise Exception("Node {} has no parent".format(self.id))
-            msg = Message(self.id, self.parent)
+            msg = Message(self.id, self.parent, self.clock.read())
             self.outbox.append(msg)
     
     def recv_msg(self, recvMsg):
@@ -87,3 +89,5 @@ class TelosB(Node):
             recvMsg.src = self.id
             recvMsg.dst = self.parent
             self.outbox.append(recvMsg)
+        else:
+            self.latencies.append(self.clock.read() - recvMsg.time)

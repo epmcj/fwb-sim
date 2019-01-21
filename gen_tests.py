@@ -1,0 +1,38 @@
+import tools
+import sys
+import json
+
+nlevels = None
+nrange  = None
+outName = None
+
+for i in range(1, len(sys.argv), 2):
+    if sys.argv[i] == "-l":
+        nlevels = int(sys.argv[i+1])
+    elif sys.argv[i] == "-d":
+        nrange = float(sys.argv[i+1])
+    elif sys.argv[i] == "-o":
+        outName = sys.argv[i+1]
+
+if nlevels is None:
+    print("Missing number of levels (-n [NUMBER])")
+    exit(1)
+if nrange is None:
+    print("Missing nodes max distance (-d [DISTANCE])")
+    exit(1)
+if outName is None:
+    print("Missing output file (-o [FILE])")
+    exit(1)
+
+data = {}
+data["network"] = []
+
+nodes, topo = tools.generate_full_binary_tree_network(nlevels, nrange)
+
+data["network"].append({
+    "nodes" : nodes,
+    "topology" : topo
+})
+
+with open(outName, "w") as outFile:
+    json.dump(data, outFile)

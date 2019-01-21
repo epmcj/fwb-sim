@@ -105,6 +105,10 @@ class Simulator:
                 print("Node {} is parent of ".format(i) + \
                       "nodes {}".format(self.parentOf[i]))
 
+    def set_data_collection_start(self, dcStart):
+        assert (dcStart >= 0), "Start time must be >= 0"
+        self.dcStart = dcStart
+
     def set_data_collection(self, dcStart, dcInterval, dcStop=tools.INFINITY):
         self.dcStart    = dcStart
         self.dcInterval = dcInterval
@@ -137,8 +141,8 @@ class Simulator:
         assert (self.slotSize > 0), "TDMA time slots must be > 0" 
         assert (len(self.nodes) is not 0), "Missing nodes" 
         assert (self.dcStart is not tools.INFINITY), "Missing app start time"
-        assert (self.dcInterval is not tools.INFINITY), "Missing app "+ \
-                                                        "interval time"
+        # assert (self.dcInterval is not tools.INFINITY), "Missing app "+ \
+        #                                                 "interval time"
         assert (self.dcStop > self.dcStart), "Stop time must be > start time"
         assert (self.channel != None), "Missing transmission channel"
 
@@ -162,7 +166,8 @@ class Simulator:
             self.nodes[i].set_slot_size(self.slotSize)
             self.nodes[i].set_frame_time(self.frameTime)
             for slot in self.nodeSlots[i]:
-                ntime = self.clock.read() + (slot * self.slotSize)
+                # slots are numbered from 1 to n
+                ntime = self.clock.read() + ((slot - 1) * self.slotSize)
                 self.evMngr.insert(EG.create_node_call_event(ntime, i))
                 self.nodes[i].add_slot(ntime)
             self.nodes[i].start_tdma_system()
@@ -181,13 +186,13 @@ class Simulator:
         # self.clock.set_alarm(self.do_data_collection, self.dcStart, \
         #                      self.dcInterval, self.dcStop)
         self.dcInterval = self.frameTime
-        self.clock.set_periodic_temp(self.do_data_collection, self.dcInterval, \
-                                     self.dcStop)
+        self.clock.set_periodic_alarm(self.do_data_collection, self.dcStart, \
+                                      self.dcInterval, self.dcStop)
 
         simTime = framesToSim * self.frameTime
         self.evMngr.insert(EG.create_stop_simulation_event(simTime))
 
-        print("Simulation started")
+        print("========= Simulation started =========")
         print(self.clock.read())
         while len(self.evMngr) != 0:
             event = self.evMngr.get_next()
@@ -198,7 +203,7 @@ class Simulator:
                                 str(etime) + ")")
             self.clock.force_time(etime) # adjusting time for event
             if self.verbose:
-                print("curr time: {}".format(self.clock.read()))
+                print("{0:.5f}: ".format(self.clock.read()), end = "")
             if etime >= self.nextFrameStart:
                 self.framesExecuted += 1
                 self.nextFrameStart += self.frameTime
@@ -206,9 +211,9 @@ class Simulator:
             einfo = event[2]
 
             if ecode is EventCode.NODE_CALL or ecode is EventCode.NODE_RESUME:
-                # einfo = node id
+                # einfo := node id
                 if ecode is EventCode.NODE_CALL:
-                    # changing for the next frame
+                    # updating for the next frame
                     ntime = etime + self.frameTime
                     self.evMngr.insert(EG.change_event(event, newTime=ntime))
                     
@@ -237,7 +242,7 @@ class Simulator:
 
             else:
                 raise Exception("Unknown event code " + str(ecode))
-        print("Simulation finished")
+        print("========= Simulation finished =========")
 
     def __handle_tx_request(self, src, msg):
         # estimating transmission

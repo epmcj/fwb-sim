@@ -12,14 +12,16 @@
 ##                                                                           ##
 ##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
 ###############################################################################
+
+# (!) Event Code value is used as event priority by the scheduler
 class EventCode:
-    TX_START     = 0
-    TX_FINISH    = 1
-    NODE_CALL    = 2
-    NODE_RESUME  = 3
-    NODE_SLEEP   = 4
-    COLLECT_DATA = 5
-    STOP_SIM     = 6
+    STOP_SIM     = 0
+    TX_START     = 1
+    TX_FINISH    = 2
+    COLLECT_DATA = 3
+    NODE_CALL    = 4
+    NODE_RESUME  = 5
+    NODE_SLEEP   = 6
 
 class EventGenerator:
     # Events are composed by (time, event code, event info)

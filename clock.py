@@ -43,20 +43,19 @@ class Clock:
     def read(self):
         return self.__currTime
 
-    def set_alarm(self, call, start, interval, stop = INFINITY):
+    def set_periodic_alarm(self, call, start, interval, stop = INFINITY):
         self.nextCall = start
-        while self.nextCall <= self.__currTime:
+        self.interval = interval
+        self.routine  = call
+        self.lastCall = stop
+        while self.nextCall < self.__currTime:
             self.nextCall = self.nextCall + self.interval
 
-        self.interval = interval
-        self.lastCall = stop
-        self.routine  = call
-
-    def set_periodic_temp(self, call, interval, stop = INFINITY):
-        self.interval = interval
-        self.lastCall = stop
-        self.routine  = call
-        self.nextCall = self.__currTime + interval
+    # def set_periodic_temp(self, call, interval, stop = INFINITY):
+    #     self.interval = interval
+    #     self.lastCall = stop
+    #     self.routine  = call
+    #     self.nextCall = self.__currTime + interval
 
     def alarm_is_on(self):
         return self.nextCall is not INFINITY
