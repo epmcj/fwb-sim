@@ -17,28 +17,22 @@ class FWBI(FWB):
     def __init__(self):
         super(FWBI, self).__init__()
         self.interRange     = None
-        self.nodesPositions = []
-        self.canInterWith   = []
+        self.canInterWith   = None
 
-    def set_interference_range(self, interRange):
-        assert (interRange >= 0), "interference range must be >= 0"
-        self.interRange = interRange
+    # set information about which nodes a node can interfere with if they 
+    # transmit together
+    def set_interference_info(self, canInterWith):
+        assert (len(canInterWith) == self.numNodes), "Missing interference " + \
+                                                "information about some nodes"
+        self.canInterWith = canInterWith
 
     def get_neighbors_slots(self, nid):
-        # finding the slots used by its parents, siblings, children and nodes 
-        # that can interfere with it.
-        neighborsSlots = []
-        if self.childOf[nid] is not None:
-            for parent in self.childOf[nid]:
+        assert (self.canInterWith != None), "Missing interference information"
+        neighborsSlots = super(FWBI, self).get_neighbors_slots(nid)
+        # adding slots to avoid possible interference
+        if self.canInterWith[nid] is not None:
+            for node in self.canInterWith[nid]:
                 # parent slots
-                for slotNum in self.nodeSlots[parent]:
-                    neighborsSlots.append(slotNum)
-                # siblings slots
-                for sibling in self.parentOf[parent]:
-                    for slotNum in self.nodeSlots[sibling]:
-                        neighborsSlots.append(slotNum)
-        if self.parentOf[nid] is not None:
-            for child in self.parentOf[nid]:
-                for slotNum in self.nodeSlots[child]:
+                for slotNum in self.nodeSlots[node]:
                     neighborsSlots.append(slotNum)
         return list(set(neighborsSlots)) # removing duplicates

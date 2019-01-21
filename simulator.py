@@ -13,13 +13,14 @@
 ##                                                                           ##
 ##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
 ###############################################################################
-from node       import Node
+from telosb     import TelosB
 from event_mngr import EventManager
 from sim_events import EventGenerator as EG, EventCode
 from clock      import Clock
 from channels   import RFChannel
+from scheduler  import Scheduler
 from fwb        import FWB
-from math       import log10
+from radios     import CC2420Radio
 import tools
 
 class Simulator:
@@ -32,10 +33,11 @@ class Simulator:
         # topology information
         self.parentOf = []
         self.childOf  = []
-        # for fwb slot attribution
+        # for timeslot and bandwidth attribution
         self.nodeSlots = None
         self.nodeBW    = None
         self.bws       = []  # bandwidths available
+        self.scheduler = None
         # application parameters
         self.dcStart    = tools.INFINITY
         self.dcInterval = tools.INFINITY
@@ -51,14 +53,14 @@ class Simulator:
         # transmission control
         self.txs = [] # composed of [tx_id, [src, msg, power], success]
         # statistics
-        self.startedTxs  = 0
+        self.ongoingTxs  = 0
         self.finishedTxs = 0
         self.failedRxs   = 0
         self.succeedRxs  = 0
         self.numDCollect = 0 # number of data collections
 
     def add_node(self, node):
-        assert issubclass(type(node), Node)
+        assert issubclass(type(node), TelosB)
         node.set_id(len(self.nodes))
         node.set_clock_src(self.clock)
         node.set_verbose(self.verbose)
@@ -80,8 +82,13 @@ class Simulator:
     def set_channel_info(self, alpha, ambNoise):
         self.channel = RFChannel(alpha, ambNoise)
 
+    def set_scheduler(self, scheduler):
+        assert issubclass(type(scheduler), Scheduler)
+        self.scheduler = scheduler
+
     def set_network_topology(self, relations):
-        # relations must be a (parent, child) tuple list 
+        # relations must be a (parent, child) tuple list for each node in the 
+        # network
         assert len(self.nodes) is not 0, "No nodes yet"
         numNodes = len(self.nodes)
         self.parentOf = [ [] for i in range(numNodes) ]
@@ -105,6 +112,9 @@ class Simulator:
 
     def get_num_nodes(self):
         return len(self.nodes.values())
+
+    def get_ongoing_txs(self):
+        return self.ongoingTxs
 
     def get_num_txs(self):
         return self.finishedTxs
@@ -133,7 +143,7 @@ class Simulator:
         assert (self.channel != None), "Missing transmission channel"
 
         # initialization
-        self.startedTxs  = 0
+        self.ongoingTxs  = 0
         self.finishedTxs = 0
         self.failedRxs   = 0
         self.succeedRxs  = 0
@@ -157,7 +167,15 @@ class Simulator:
                 self.nodes[i].add_slot(ntime)
             self.nodes[i].start_tdma_system()
 
-        # distributing bandwidths [...]
+        # distributing bandwidths (simulating different bandwidths using 
+        # different radio speeds)
+        minBw = min(self.bws)
+        for i in range(len(self.nodeBW)):
+            speedUpFactor = self.nodeBW[i] / minBw
+            self.nodes[i].radio.set_tx_rate(speedUpFactor * CC2420Radio.txRate)
+            if self.verbose:
+                print("Node {} bw: {} speed: {}".format(i, self.nodeBW[i], 
+                      self.nodes[i].radio.txRate))
 
         # setting alarm to start the data collection process
         # self.clock.set_alarm(self.do_data_collection, self.dcStart, \
@@ -224,17 +242,18 @@ class Simulator:
     def __handle_tx_request(self, src, msg):
         # estimating transmission
         if self.verbose:
-            print("TX from node " + str(src) + " will start")
+            print("TX from node " + str(src) + " will start", end=" ")
         ttime, tenergy = tools.estimate_transmission(msg, self.nodes[src].radio)
         ftime = self.clock.read() + ttime
+        print("({0:.4f} to {1:.4f})".format(self.clock.read(), ftime))
         # adding call node event (time is multiplied by 1.01 to assure it will 
         # called after the transmission was completed)
         self.evMngr.insert(EG.create_node_resume_event(ftime * 1.01, src))
         # evaluating transmissions
-        txid   = self.startedTxs
+        txid   = self.ongoingTxs
         txInfo = [src, msg, self.nodes[src].radio.txPower]
         self.txs.append([txid, txInfo, True])
-        self.startedTxs += 1
+        self.ongoingTxs += 1
         self.__evaluate_txs()
         # adding event to check if the transmission was successful
         self.evMngr.insert(EG.create_tx_finish_event(ftime, txid))
@@ -254,6 +273,7 @@ class Simulator:
                 else:
                     self.failedRxs += 1
                 self.finishedTxs += 1
+                self.ongoingTxs  -= 1
                 break
 
     def __evaluate_txs(self):
@@ -271,8 +291,9 @@ class Simulator:
             if tsuccess:
                 txsToCheck.append(i)
             i += 1
-        # checking the transmissions
+        # checking the transmissions that have not yet failed.
         for i in txsToCheck:
+            print("evaluating tx {}".format(self.txs[i][0]))
             tinfo = self.txs[i][1]
             src   = tinfo[0]
             power = tinfo[2]
@@ -295,7 +316,7 @@ class Simulator:
                 sinr = float("inf")
             else:
                 sinr = sinr / (self.channel.noise + inter)
-            print("SINR = {} ({}) from {} to {}".format(sinr, 10*log10(sinr), src, dst))
+            print("SINR = {} ({}) from {} to {}".format(sinr, sinr, src, dst))
             print("interference = {}".format(inter))
             # checking if the data can be decoded
             if sinr >= self.nodes[dst].radio.minSIR:
@@ -305,24 +326,21 @@ class Simulator:
 
     # schedule timeslots
     def do_schedule(self):
-        scheduler = FWB()
-        scheduler.set_number_of_nodes(len(self.nodes))
-        scheduler.set_parent_info(self.parentOf)
-        scheduler.set_sink_id(self.sinkid)
-        scheduler.set_available_bandwidths(self.bws)
-
-        scheduler.schedule()
-
-        self.nobeBW         = scheduler.get_bandwidth_schedule()
-        self.nodeSlots      = scheduler.get_slot_schedule()
-        self.schedulingSize = scheduler.get_slot_schedule_size()
-        self.frameTime      = self.schedulingSize * self.slotSize
+        if self.scheduler is None:
+            #TODO: IMPLEMENTAR !!
+            None
+        else:
+            self.scheduler.schedule()
+            self.nodeBW         = self.scheduler.get_bandwidth_schedule()
+            self.nodeSlots      = self.scheduler.get_slot_schedule()
+            self.schedulingSize = self.scheduler.get_slot_schedule_size()
+            self.frameTime      = self.schedulingSize * self.slotSize
 
         print(self.schedulingSize)
         print(self.nodeSlots)
         print(self.frameTime)
         
-        if self.nobeBW is None:
+        if self.nodeBW is None:
             raise Exception("Failed to schedule the bandwidths")
         if self.nodeSlots is None:
             raise Exception("Failed to schedule the timeslots")

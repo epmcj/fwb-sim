@@ -11,8 +11,9 @@
 ###############################################################################
 import random
 import math
+from scheduler import Scheduler
 
-class FWB:
+class FWB(Scheduler):
     def __init__(self):
         self.numNodes  = 0
         self.sinkid    = None
@@ -21,7 +22,6 @@ class FWB:
         self.childOf   = []
         self.bws       = []
         self.schedSize = 0
-        # self.capacity  = None
         self.nodeSlots = None
         self.nodeBw    = None
 
@@ -45,17 +45,18 @@ class FWB:
     def get_bandwidth_schedule(self):
         return self.nodeBw
 
-    # The parameter parentOf must be a list of lists with length equals to the 
-    # number of nodes
-    def set_parent_info(self, parentOf):
-        assert (len(parentOf) == self.numNodes), "Missing information about" + \
-                                                 " some nodes"
-        self.parentOf = parentOf
-        # generating "child of" information to help in the schedule
-        self.childOf = [[] for x in range(self.numNodes)]
-        for i in range(len(self.parentOf)):
-            for child in self.parentOf[i]:
-                self.childOf[child].append(i)
+    def set_network_topology(self, relations):
+        # relations must be a (parent, child) tuple list for each node in the 
+        # network
+        self.parentOf = [ [] for i in range(self.numNodes) ]
+        self.childOf  = [ [] for i in range(self.numNodes) ]
+        for parent, child in relations:
+            self.parentOf[parent].append(child)
+            self.childOf[child].append(parent)
+        # removing duplicates
+        for i in range(self.numNodes):
+            self.parentOf[i] = list(set(self.parentOf[i]))
+            self.childOf[i]  = list(set(self.childOf[i]))
 
     def __calculate_descendants(self):
         assert (self.sinkid is not None), "Missing sink Node" 
@@ -118,10 +119,10 @@ class FWB:
         assert (self.numNodes != 0), "No node to schedule"
         assert (len(self.bws) != 0), "No bandwidth available"
 
-        self.factors = [x / min(self.bws) for x in self.bws]
+        self.factors   = [x / min(self.bws) for x in self.bws]
         self.schedSize = 0
         self.nodeSlots = [[] for x in range(self.numNodes)]
-        self.nodeBw    = [None] * self.numNodes
+        self.nodeBw    = [ min(self.bws) ] * self.numNodes
         self.__calculate_descendants()
         capacity = max(self.bws) / min(self.bws)
 

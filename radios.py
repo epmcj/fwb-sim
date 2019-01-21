@@ -33,7 +33,8 @@ class CC2420Radio(Radio):
     rxPowerConsumption = 0
     maxTxPower         = 10**(-3 + 0/10)  # W = 0 dBm
     minTxPower         = 10**(-3 - 24/10) # W = -24 dBm
-    minSIR             = 10**(-3 - 94/10) # W = -94 dBm
+    # minSIR             = 10**(-3 - 94/10) # W = -94 dBm
+    minSIR             = 3
     txRange            = 30               # m (max indoor)
     txRate             = 250e3            # 250 kbps
     
@@ -45,7 +46,7 @@ class CC2420Radio(Radio):
         self.set_tx_power(txPower)
 
     def set_tx_rate(self, txRate):
-        assert txRate <= CC2420Radio.txRate, "CC2420 max tx rate is 250 kbps"
+        # assert txRate <= CC2420Radio.txRate, "CC2420 max tx rate is 250 kbps"
         self.txRate = txRate
 
     def set_tx_power(self, txPower):
