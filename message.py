@@ -12,9 +12,10 @@
 ###############################################################################
 
 class Message:
-    def __init__(self, src, dst, time=None):
+    def __init__(self, src, dst, cid=None, time=None):
         self.src  = src
         self.dst  = dst
+        self.cid  = cid  # collection id
         self.time = time # used to measure latency
 
     # all msgs are 128 bytes (1024 bits) long

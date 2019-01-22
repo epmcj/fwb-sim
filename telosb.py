@@ -29,6 +29,10 @@ class TelosB(Node):
         # node info
         self.radio = CC2420Radio(CC2420Radio.maxTxPower)
         self.mode  = TelosBMode.IDLE
+        # for energy consumption
+        self.voltage = 3.0 # V
+        self.txPower = self.voltage * CC2420Radio.txCurrent
+        self.rxPower = self.voltage * CC2420Radio.rxCurrent
         # routing info
         self.parent   = None
         self.children = []
@@ -69,6 +73,9 @@ class TelosB(Node):
             # send the messages to its parent
             if len(self.outbox) != 0:
                 msg = self.outbox.pop(0)
+                # # insert timestamp in message that was just collected
+                # if msg.time == None:
+                #     msg.time = currTime
                 self.sentMsgsCounter += 1
                 self.set_tx_mode()
                 return EG.create_tx_start_event(currTime, msg)
@@ -80,10 +87,24 @@ class TelosB(Node):
         if not self.isSink:
             if self.parent is None:
                 raise Exception("Node {} has no parent".format(self.id))
-            msg = Message(self.id, self.parent, self.clock.read())
+            # msg = Message(self.id, self.parent, None)
+            msg = Message(self.id, self.parent, self.dataCollections, 
+                          self.clock.read())
             self.outbox.append(msg)
+            self.dataCollections += 1
     
+    def consume_rx_energy(self, time):
+        self.energy -= self.rxPower * time
+
+    def consume_tx_energy(self, time):
+        self.energy -= self.txPower * time
+
+    def finish_tx(self, sendTime):
+        self.consume_tx_energy(sendTime)
+
     def recv_msg(self, recvMsg):
+        # consume energy for the reception
+        # self.consume_rx_energy(recvTime)
         self.recvdMsgsCounter += 1
         if not self.isSink:
             recvMsg.src = self.id

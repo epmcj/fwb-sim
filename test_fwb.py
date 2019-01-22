@@ -81,7 +81,8 @@ with open(inName) as inFile:
     # getting schedule results
     nodeBW    = fwbScheduler.get_bandwidth_schedule()
     tschedule = fwbScheduler.get_slot_schedule()
-    print("ft (sch): {}".format(fwbScheduler.get_slot_schedule_size()))
+    frameSize = fwbScheduler.get_slot_schedule_size()
+    print("ft (sch): {}".format(frameSize))
     # distributing bandwidths (simulating different bandwidths using different
     # radio speeds)
     minBw = min(bws)
@@ -94,20 +95,22 @@ with open(inName) as inFile:
     sim.set_network_topology(topology)
     sim.set_channel_info(alpha, noise)
     sim.set_slot_size(ssize)
-    sim.set_data_collection_start(0)
+    sim.set_data_collection(0, frameSize * ssize)
     sim.set_timeslot_schedule(tschedule)
     # running simulator
     sim.run(frames)
     # printing results
     print("{} txs ".format(sim.get_num_txs()), end= ": ")
-    print("{} V ".format(sim.get_num_rxs_successes()), end= " ")
-    print("{} X ".format(sim.get_num_rxs_failures()), end= " ")
+    print("{} S,".format(sim.get_num_rxs_successes()), end= " ")
+    print("{} F".format(sim.get_num_rxs_failures()), end= " ")
     print("+ {} ongoing txs".format(sim.get_ongoing_txs()))
-    for node in sim.nodes:
-        print("node {}: rcvd {}, sent {}, has {} msgs".format(node.id, 
-                                                    node.recvdMsgsCounter, 
-                                                    node.sentMsgsCounter,
-                                                    node.get_outbox_len()))
-    avgLatency = sum(sim.nodes[0].latencies) / len(sim.nodes[0].latencies)
-    errLatency = 1.96 * avgLatency / math.sqrt(len(sim.nodes[0].latencies))
+    # for node in sim.nodes:
+    #     print("node {}: rcvd {}, sent {}, has {} msgs".format(node.id, 
+    #                                                 node.recvdMsgsCounter, 
+    #                                                 node.sentMsgsCounter,
+    #                                                 node.get_outbox_len()))
+    avgLatency = sum(sim.nodes[sinkid].latencies) / \
+                    len(sim.nodes[sinkid].latencies)
+    errLatency = 1.96 * avgLatency / math.sqrt(len(sim.nodes[sinkid].latencies))
     print("Latency: {} +- {}".format(avgLatency, errLatency))
+    print("Data Collected: {}".format(sim.nodes[sinkid].recvdMsgsCounter))

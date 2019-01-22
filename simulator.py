@@ -13,13 +13,13 @@
 ##                                                                           ##
 ##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
 ###############################################################################
-from telosb     import TelosB
+from node       import Node
 from event_mngr import EventManager
 from sim_events import EventGenerator as EG, EventCode
 from clock      import Clock
 from channels   import RFChannel
-from radios     import CC2420Radio
 import tools
+# import math
 
 class Simulator:
     beta = 0
@@ -55,7 +55,7 @@ class Simulator:
         self.numDCollect = 0 # number of data collections
 
     def add_node(self, node):
-        assert issubclass(type(node), TelosB)
+        assert issubclass(type(node), Node)
         node.set_id(len(self.nodes))
         node.set_clock_src(self.clock)
         node.set_verbose(self.verbose)
@@ -82,8 +82,7 @@ class Simulator:
         for nodeSlots in tschedule:
             for slot in nodeSlots:
                 slotsUsed.add(slot)
-        self.frameTime = len(slotsUsed)
-        print("ft (sim): {}".format(self.frameTime))
+        self.frameSize = len(slotsUsed)
 
     def set_network_topology(self, relations):
         # relations must be a (parent, child) tuple list for each node in the 
@@ -140,8 +139,8 @@ class Simulator:
         assert (self.slotSize > 0), "TDMA time slots must be > 0" 
         assert (len(self.nodes) is not 0), "Missing nodes" 
         assert (self.dcStart is not tools.INFINITY), "Missing app start time"
-        # assert (self.dcInterval is not tools.INFINITY), "Missing app "+ \
-        #                                                 "interval time"
+        assert (self.dcInterval is not tools.INFINITY), "Missing app "+ \
+                                                        "interval time"
         assert (self.dcStop > self.dcStart), "Stop time must be > start time"
         assert (self.channel != None), "Missing transmission channel"
 
@@ -160,6 +159,7 @@ class Simulator:
             self.nodes[nid].set_children(self.parentOf[nid])
 
         # distributing time slots
+        self.frameTime = self.frameSize * self.slotSize
         for i in range(len(self.nodeSlots)):
             self.nodes[i].set_slot_size(self.slotSize)
             self.nodes[i].set_frame_time(self.frameTime)
@@ -170,11 +170,8 @@ class Simulator:
                 self.nodes[i].add_slot(ntime)
             self.nodes[i].start_tdma_system()
 
-        for node in self.nodes:
-            print("node {} radio speed = {}".format(node.id, node.radio.txRate))
-
         # setting alarm to start the data collection process
-        self.dcInterval = self.frameTime
+        # self.dcInterval = self.frameTime
         self.clock.set_periodic_alarm(self.do_data_collection, self.dcStart, \
                                       self.dcInterval, self.dcStop)
 
@@ -186,9 +183,8 @@ class Simulator:
             event = self.evMngr.get_next()
             etime = event[0]
             if etime < self.clock.read():
-                raise Exception("Can not go to the past! (" + \
-                                str(self.clock.read()) + " < " + \
-                                str(etime) + ")")
+                raise Exception("Can not go to the past ({} < {})".format(
+                                                    self.clock.read(), etime))
             self.clock.force_time(etime) # adjusting time for event
             if self.verbose:
                 print("{0:.5f}: ".format(self.clock.read()), end = "")
@@ -216,6 +212,8 @@ class Simulator:
                     msg = newEvent[2]
                     self.__handle_tx_request(einfo, msg)
                 elif newEvent[1] is EventCode.NODE_SLEEP:
+                    if self.verbose:
+                        print("\tNode {} finishing exec".format(einfo))
                     continue
                 else:
                     raise Exception("Bad event {} from node {}".format(
@@ -224,7 +222,7 @@ class Simulator:
             elif ecode is EventCode.TX_FINISH:
                 # einfo = transmission id
                 if self.verbose:
-                    print("TX " + str(einfo) + " is finishing")
+                    print("TX {} is finishing".format(einfo))
                 self.__handle_tx_finish(einfo)
             
             elif ecode is EventCode.STOP_SIM:
@@ -239,9 +237,9 @@ class Simulator:
         ttime, tenergy = tools.estimate_transmission(msg, self.nodes[src].radio)
         ftime = self.clock.read() + ttime
         if self.verbose:
-            print("Node {0:d} tx: {1:.4f} to {2:.4f})".format(src,  
-                                                           self.clock.read(),
-                                                           ftime))
+            print("\tNode {0:d} tx: {1:.4f} to {2:.4f}".format(src,  
+                                                            self.clock.read(),
+                                                            ftime))
         # adding call node event (adding 0.00001 to assure it will called after
         # the transmission was completed)
         self.evMngr.insert(EG.create_node_resume_event(ftime + 0.00001, src))
@@ -290,7 +288,7 @@ class Simulator:
         # checking the transmissions that have not yet failed.
         for i in txsToCheck:
             if self.verbose:
-                print("Evaluating tx {}".format(self.txs[i][0]))
+                print("\t- Evaluating tx {}".format(self.txs[i][0]))
             tinfo = self.txs[i][1]
             src   = tinfo[0]
             power = tinfo[2]
@@ -312,8 +310,9 @@ class Simulator:
                 sinr = float("inf")
             else:
                 sinr = sinr / (self.channel.noise + inter)
+                # sinr = 10 * math.log10(sinr) # to dB
             if self.verbose:
-                print("\tSINR = {} from {} to {}".format(sinr, src, dst))
+                print("\tSINR = {0:.2f} ({1:d}->{2:d})".format(sinr, src, dst))
             # checking if the data can be decoded
             if sinr >= self.nodes[dst].radio.minSIR:
                 self.txs[i][2] = True

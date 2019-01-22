@@ -77,5 +77,35 @@ def generate_full_binary_tree_network(numLvls, maxRange, minRange=0, ipos=(0,0))
     topo = []
     for i in range(len(isParentOf)):
         for j in isParentOf[i]:
-            topo.append( (i, j) )
+            topo.append((i, j))
     return nodes, topo
+
+
+def generate_random_tree_network(numNodes, maxRange, maxChildren, minRange=0, 
+                                 minChildren=1, ipos=(0,0)):
+    nodes = []
+    topo  = []
+    nexts = []
+    maxDistance = maxRange - minRange
+    # first node
+    nodes.append(ipos)
+    nid = 0
+    nexts.append(nid)
+    while len(nodes) < numNodes:
+        parent = nexts.pop(0)
+        numChild = random.randint(minChildren, maxChildren)
+        # limitating the number of children by the remaining number of nodes
+        numChild = min(numChild, (numNodes - len(nodes)))
+        print("node {} has {} children".format(parent, numChild))
+        # generating children positions
+        for i in range(numChild):
+            na = -pi + (random.random() * 2 * pi)  # from -90 to 90 degrees
+            nd = minRange + random.random() * maxDistance
+            nx = nodes[parent][0] + nd * cos(na)
+            ny = nodes[parent][1] + nd * sin(na)
+            nodes.append((nx, ny))
+            cid = len(nodes) - 1
+            topo.append((parent, cid))
+            nexts.append(cid)
+    return nodes, topo
+
