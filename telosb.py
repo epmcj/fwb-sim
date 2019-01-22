@@ -63,7 +63,7 @@ class TelosB(Node):
         currTime = self.clock.read()
         if currTime == self.get_next_slot():
             # slot ends early because of the guard time
-            self.slotEnd = self.get_next_slot() + (self.slotSize * 0.95)
+            self.slotEnd = self.get_next_slot() + (self.slotSize * 0.9)
             self.update_next_slot()
         if (currTime < self.slotEnd) and (not self.isSink):
             # send the messages to its parent

@@ -7,10 +7,6 @@ from telosb     import TelosB
 from tools      import get_possible_interference_info
 from fwb        import FWB
 
-##################################################################
-## E SE SLOTS DOS FILHOS FOSSEM MENOR QUE OS DOS PAIS ?
-##################################################################
-
 sinkid  = 0
 # noise   = 0
 inName  = None
@@ -61,53 +57,40 @@ noise = CC2420Radio.maxTxPower / (2 * CC2420Radio.minSIR *
 
 # executing
 with open(inName) as inFile:
-    # reading node positions and network topology from the input file
     data     = json.load(inFile)
     nodes    = data["network"][0]["nodes"]
     topology = data["network"][0]["topology"]
-    # creating node references
+    
     numNodes = len(nodes)
-    nodesRef = []
+
+    sim = Simulator()
     for nid in range(len(nodes)):
-        nodesRef.append(TelosB(nid, nodes[nid][0], nodes[nid][1], float("inf"), 
-                        nid == sinkid))
-    # doing schedule for the simulation
+        sim.add_node(TelosB(nid, nodes[nid][0], nodes[nid][1], float("inf"), 
+                            nid == sinkid))
+    sim.set_network_topology(topology)
+    sim.set_channel_info(alpha, noise)
+    sim.set_available_bws(bws)
+    sim.set_slot_size(ssize)
+    sim.set_data_collection_start(0)
+
     fwbScheduler = FWB()
     fwbScheduler.set_number_of_nodes(numNodes)
     fwbScheduler.set_network_topology(topology)
     fwbScheduler.set_sink_id(sinkid)
     fwbScheduler.set_available_bandwidths(bws)
-    fwbScheduler.schedule()
-    # getting schedule results
-    nodeBW    = fwbScheduler.get_bandwidth_schedule()
-    tschedule = fwbScheduler.get_slot_schedule()
-    print("ft (sch): {}".format(fwbScheduler.get_slot_schedule_size()))
-    # distributing bandwidths (simulating different bandwidths using different
-    # radio speeds)
-    minBw = min(bws)
-    for i in range(len(nodeBW)):
-        speedUpFactor = nodeBW[i] / minBw
-        nodesRef[i].radio.set_tx_rate(speedUpFactor * CC2420Radio.txRate)
-    # creating simulator
-    sim = Simulator()
-    sim.add_nodes(nodesRef)
-    sim.set_network_topology(topology)
-    sim.set_channel_info(alpha, noise)
-    sim.set_slot_size(ssize)
-    sim.set_data_collection_start(0)
-    sim.set_timeslot_schedule(tschedule)
-    # running simulator
+
+    sim.set_scheduler(fwbScheduler)
+
     sim.run(frames)
-    # printing results
+
     print("{} txs ".format(sim.get_num_txs()), end= ": ")
     print("{} V ".format(sim.get_num_rxs_successes()), end= " ")
-    print("{} X ".format(sim.get_num_rxs_failures()), end= " ")
+    print("{} X ".format(sim.get_num_rxs_failures()))
     print("+ {} ongoing txs".format(sim.get_ongoing_txs()))
     for node in sim.nodes:
-        print("node {}: rcvd {}, sent {}, has {} msgs".format(node.id, 
+        print("node {}: rcvd {}, sent {} msgs".format(node.id, 
                                                     node.recvdMsgsCounter, 
-                                                    node.sentMsgsCounter,
-                                                    node.get_outbox_len()))
+                                                    node.sentMsgsCounter))
     avgLatency = sum(sim.nodes[0].latencies) / len(sim.nodes[0].latencies)
     errLatency = 1.96 * avgLatency / math.sqrt(len(sim.nodes[0].latencies))
     print("Latency: {} +- {}".format(avgLatency, errLatency))

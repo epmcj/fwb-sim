@@ -18,6 +18,8 @@ from event_mngr import EventManager
 from sim_events import EventGenerator as EG, EventCode
 from clock      import Clock
 from channels   import RFChannel
+from scheduler  import Scheduler
+from fwb        import FWB
 from radios     import CC2420Radio
 import tools
 
@@ -33,6 +35,9 @@ class Simulator:
         self.childOf  = []
         # for timeslot and bandwidth attribution
         self.nodeSlots = None
+        self.nodeBW    = None
+        self.bws       = []  # bandwidths available
+        self.scheduler = None
         # application parameters
         self.dcStart    = tools.INFINITY
         self.dcInterval = tools.INFINITY
@@ -67,23 +72,19 @@ class Simulator:
         for node in nodes:
             self.add_node(node)
 
+    def set_available_bws(self, bws):
+        self.bws = bws
+        self.bws.sort()
+
     def set_slot_size(self, slotSize):
         self.slotSize = slotSize
 
     def set_channel_info(self, alpha, ambNoise):
         self.channel = RFChannel(alpha, ambNoise)
 
-    # tschedule must be a list of slots for each node in the network. Slots must
-    # be numbered from 1 to n.
-    def set_timeslot_schedule(self, tschedule):
-        assert len(tschedule) == len(self.nodes)
-        self.nodeSlots = tschedule
-        slotsUsed = set()
-        for nodeSlots in tschedule:
-            for slot in nodeSlots:
-                slotsUsed.add(slot)
-        self.frameTime = len(slotsUsed)
-        print("ft (sim): {}".format(self.frameTime))
+    def set_scheduler(self, scheduler):
+        assert issubclass(type(scheduler), Scheduler)
+        self.scheduler = scheduler
 
     def set_network_topology(self, relations):
         # relations must be a (parent, child) tuple list for each node in the 
@@ -160,6 +161,7 @@ class Simulator:
             self.nodes[nid].set_children(self.parentOf[nid])
 
         # distributing time slots
+        self.do_schedule()
         for i in range(len(self.nodeSlots)):
             self.nodes[i].set_slot_size(self.slotSize)
             self.nodes[i].set_frame_time(self.frameTime)
@@ -170,10 +172,19 @@ class Simulator:
                 self.nodes[i].add_slot(ntime)
             self.nodes[i].start_tdma_system()
 
-        for node in self.nodes:
-            print("node {} radio speed = {}".format(node.id, node.radio.txRate))
+        # distributing bandwidths (simulating different bandwidths using 
+        # different radio speeds)
+        minBw = min(self.bws)
+        for i in range(len(self.nodeBW)):
+            speedUpFactor = self.nodeBW[i] / minBw
+            self.nodes[i].radio.set_tx_rate(speedUpFactor * CC2420Radio.txRate)
+            if self.verbose:
+                print("Node {} bw: {} speed: {}".format(i, self.nodeBW[i], 
+                      self.nodes[i].radio.txRate))
 
         # setting alarm to start the data collection process
+        # self.clock.set_alarm(self.do_data_collection, self.dcStart, \
+        #                      self.dcInterval, self.dcStop)
         self.dcInterval = self.frameTime
         self.clock.set_periodic_alarm(self.do_data_collection, self.dcStart, \
                                       self.dcInterval, self.dcStop)
@@ -182,6 +193,7 @@ class Simulator:
         self.evMngr.insert(EG.create_stop_simulation_event(simTime))
 
         print("========= Simulation started =========")
+        print(self.clock.read())
         while len(self.evMngr) != 0:
             event = self.evMngr.get_next()
             etime = event[0]
@@ -204,11 +216,9 @@ class Simulator:
                     # updating for the next frame
                     ntime = etime + self.frameTime
                     self.evMngr.insert(EG.change_event(event, newTime=ntime))
-                    if self.verbose:
-                        print("Node {} new slot".format(einfo))
-                else:
-                    if self.verbose:
-                        print("Node {} resuming exec".format(einfo))
+                    
+                if self.verbose:
+                    print("Node " + str(einfo) + " is executing")
 
                 newEvent = self.nodes[einfo].execute()
                 if newEvent[1] is EventCode.TX_START:
@@ -236,15 +246,14 @@ class Simulator:
 
     def __handle_tx_request(self, src, msg):
         # estimating transmission
+        if self.verbose:
+            print("TX from node " + str(src) + " will start", end=" ")
         ttime, tenergy = tools.estimate_transmission(msg, self.nodes[src].radio)
         ftime = self.clock.read() + ttime
-        if self.verbose:
-            print("Node {0:d} tx: {1:.4f} to {2:.4f})".format(src,  
-                                                           self.clock.read(),
-                                                           ftime))
-        # adding call node event (adding 0.00001 to assure it will called after
-        # the transmission was completed)
-        self.evMngr.insert(EG.create_node_resume_event(ftime + 0.00001, src))
+        print("({0:.4f} to {1:.4f})".format(self.clock.read(), ftime))
+        # adding call node event (time is multiplied by 1.01 to assure it will 
+        # called after the transmission was completed)
+        self.evMngr.insert(EG.create_node_resume_event(ftime * 1.01, src))
         # evaluating transmissions
         txid   = self.ongoingTxs
         txInfo = [src, msg, self.nodes[src].radio.txPower]
@@ -319,6 +328,28 @@ class Simulator:
                 self.txs[i][2] = True
             else:
                 self.txs[i][2] = False
+
+    # schedule timeslots
+    ############################################################################
+    ## SERIA MELHOR FAZER O ESCALONAMENTO DE FORA DO SIMULADOR ??
+    ############################################################################
+    def do_schedule(self):
+        if self.scheduler is None:
+            # basic scheduling # 1 slot for each node
+            self.nodeBW    = [ min(self.bws) for x in range(len(self.nodes)) ]
+            self.nodeSlots = [ [x] for x in range(self.nodes) ]
+            self.schedulingSize = len(self.nodes)
+        else:
+            self.scheduler.schedule()
+            self.nodeBW         = self.scheduler.get_bandwidth_schedule()
+            self.nodeSlots      = self.scheduler.get_slot_schedule()
+            self.schedulingSize = self.scheduler.get_slot_schedule_size()
+        self.frameTime      = self.schedulingSize * self.slotSize
+        
+        if self.nodeBW is None:
+            raise Exception("Failed to schedule the bandwidths")
+        if self.nodeSlots is None:
+            raise Exception("Failed to schedule the timeslots")
 
         return None
         

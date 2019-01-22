@@ -60,45 +60,57 @@ noise = CC2420Radio.maxTxPower / (2 * CC2420Radio.minSIR *
 
 # executing
 with open(inName) as inFile:
+    # reading node positions and network topology from the input file
     data     = json.load(inFile)
     nodes    = data["network"][0]["nodes"]
     topology = data["network"][0]["topology"]
-    
+    # creating node references
     numNodes = len(nodes)
-
-    sim = Simulator()
+    nodesRef = []
     for nid in range(len(nodes)):
-        sim.add_node(TelosB(nid, nodes[nid][0], nodes[nid][1], float("inf"), 
-                            nid == sinkid))
-    sim.set_network_topology(topology)
-    sim.set_channel_info(alpha, noise)
-    sim.set_available_bws(bws)
-    sim.set_slot_size(ssize)
-    sim.set_data_collection_start(0)
-
-    # for scheduler
+        nodesRef.append(TelosB(nid, nodes[nid][0], nodes[nid][1], float("inf"), 
+                        nid == sinkid))
+    # getting possible interference information (for the scheduler)
     canInterWith = get_possible_interference_info(nodes, CC2420Radio.txRange * \
                                                   coi)
-
+    # doing schedule for the simulation
     fwbiScheduler = FWBI()
     fwbiScheduler.set_number_of_nodes(numNodes)
     fwbiScheduler.set_network_topology(topology)
     fwbiScheduler.set_interference_info(canInterWith)
     fwbiScheduler.set_sink_id(sinkid)
     fwbiScheduler.set_available_bandwidths(bws)
-
-    sim.set_scheduler(fwbiScheduler)
-
+    fwbiScheduler.schedule()
+    # getting schedule results
+    nodeBW    = fwbiScheduler.get_bandwidth_schedule()
+    tschedule = fwbiScheduler.get_slot_schedule()
+    print("ft (sch): {}".format(fwbiScheduler.get_slot_schedule_size()))
+    # distributing bandwidths (simulating different bandwidths using different
+    # radio speeds)
+    minBw = min(bws)
+    for i in range(len(nodeBW)):
+        speedUpFactor = nodeBW[i] / minBw
+        nodesRef[i].radio.set_tx_rate(speedUpFactor * CC2420Radio.txRate)
+    # creating simulator
+    sim = Simulator(True)
+    sim.add_nodes(nodesRef)
+    sim.set_network_topology(topology)
+    sim.set_channel_info(alpha, noise)
+    sim.set_slot_size(ssize)
+    sim.set_data_collection_start(0)
+    sim.set_timeslot_schedule(tschedule)
+    # running simulator
     sim.run(frames)
-
+    # printing results
     print("{} txs ".format(sim.get_num_txs()), end= ": ")
     print("{} V ".format(sim.get_num_rxs_successes()), end= " ")
-    print("{} X ".format(sim.get_num_rxs_failures()))
+    print("{} X ".format(sim.get_num_rxs_failures()), end= " ")
     print("+ {} ongoing txs".format(sim.get_ongoing_txs()))
     for node in sim.nodes:
-        print("node {}: rcvd {}, sent {} msgs".format(node.id, 
+        print("node {}: rcvd {}, sent {}, has {} msgs".format(node.id, 
                                                     node.recvdMsgsCounter, 
-                                                    node.sentMsgsCounter))
+                                                    node.sentMsgsCounter,
+                                                    node.get_outbox_len()))
     avgLatency = sum(sim.nodes[0].latencies) / len(sim.nodes[0].latencies)
     errLatency = 1.96 * avgLatency / math.sqrt(len(sim.nodes[0].latencies))
     print("Latency: {} +- {}".format(avgLatency, errLatency))
