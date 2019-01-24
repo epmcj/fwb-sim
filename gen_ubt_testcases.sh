@@ -19,8 +19,8 @@ MAX_DIST=20
 
 for NUM_LVL in "${NUM_LVLS[@]}";
 do
-    OUT_FILE=$OUT_DIR"fbt_"$NUM_LVL".in"
-    python3 gen_fbt_networks.py -l $NUM_LVL -d $MAX_DIST -m $MIN_DIST \
+    OUT_FILE=$OUT_DIR"ubt_"$NUM_LVL".in"
+    python3 gen_ubt_networks.py -l $NUM_LVL -d $MAX_DIST -m $MIN_DIST \
             -t $NUM_CASES -o $OUT_FILE
     echo $OUT_FILE
 done

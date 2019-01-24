@@ -111,4 +111,7 @@ class TelosB(Node):
             recvMsg.dst = self.parent
             self.outbox.append(recvMsg)
         else:
-            self.latencies.append(self.clock.read() - recvMsg.time)
+            if recvMsg.cid > 0:
+                self.latencies.append(self.clock.read() - recvMsg.time)
+            # else:
+            #     print("latency not registered")

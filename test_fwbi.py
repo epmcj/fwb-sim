@@ -119,8 +119,8 @@ with open(inName, "r") as inFile:
         avgLatency = sum(sim.nodes[sinkid].latencies) / \
                         len(sim.nodes[sinkid].latencies)
         errLatency = 1.96 * avgLatency / sqrt(len(sim.nodes[sinkid].latencies))
-        # print("Latency: {} +- {}".format(avgLatency, errLatency))
-        # print("Data Collected: {}".format(sim.nodes[sinkid].recvdMsgsCounter))
+        print("Latency: {} +- {}".format(avgLatency, errLatency))
+        print("Data Collected: {}".format(sim.nodes[sinkid].recvdMsgsCounter))
         
         odata["results"].append({
             "num_slots"         : frameSize,

@@ -80,6 +80,29 @@ def generate_full_binary_tree_network(numLvls, maxRange, minRange=0, ipos=(0,0))
             topo.append((i, j))
     return nodes, topo
 
+# generate a network where the sink is connected to the root of a full binary 
+# tree network.
+#       S ----- (FBT)
+def generate_unbalanced_binary_tree_network(numLvls, maxRange, minRange=0, 
+                                            ipos=(0,0)):
+    # adding initial node
+    maxDistance = maxRange - minRange
+    na = (pi/2) + (random.random() * pi)
+    nd = minRange + random.random() * maxDistance
+    nx = 0 + nd * cos(na)
+    ny = 0 + nd * sin(na)
+    #
+    nodes, topo = generate_full_binary_tree_network(numLvls, maxRange, minRange, 
+                                                    ipos)
+    # adding the first node and updating the network topology
+    nodes.insert(0, (nx, ny))
+    ntopo = []
+    ntopo.append((0,1))
+    # updating indexes
+    for relation in topo:
+        ntopo.append((relation[0] + 1, relation[1] + 1))
+    return nodes, ntopo
+
 
 def generate_random_tree_network(numNodes, maxRange, maxChildren, minRange=0, 
                                  minChildren=1, ipos=(0,0)):
@@ -96,10 +119,9 @@ def generate_random_tree_network(numNodes, maxRange, maxChildren, minRange=0,
         numChild = random.randint(minChildren, maxChildren)
         # limitating the number of children by the remaining number of nodes
         numChild = min(numChild, (numNodes - len(nodes)))
-        print("node {} has {} children".format(parent, numChild))
         # generating children positions
         for i in range(numChild):
-            na = -pi + (random.random() * 2 * pi)  # from -90 to 90 degrees
+            na = (-pi/2) + (random.random() * pi)  # from -90 to 90 degrees
             nd = minRange + random.random() * maxDistance
             nx = nodes[parent][0] + nd * cos(na)
             ny = nodes[parent][1] + nd * sin(na)

@@ -15,6 +15,8 @@ for i in range(1, len(sys.argv), 2):
         nlevels = int(sys.argv[i+1])
     elif sys.argv[i] == "-d":
         nrange = float(sys.argv[i+1])
+    elif sys.argv[i] == "-m":
+        minRange = float(sys.argv[i+1])
     elif sys.argv[i] == "-o":
         outName = sys.argv[i+1]
     elif sys.argv[i] == "-t":
@@ -36,7 +38,6 @@ data["network"] = []
 for i in range(numNet):
     nodes, topo = tools.generate_full_binary_tree_network(nlevels, nrange, 
                                                           minRange)
-
     data["network"].append({
         "nodes"    : nodes,
         "topology" : topo
