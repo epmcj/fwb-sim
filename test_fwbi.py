@@ -69,6 +69,7 @@ with open(inName, "r") as inFile:
         print("Executing Network {}".format(i + 1))
         nodes    = idata["network"][0]["nodes"]
         topology = idata["network"][0]["topology"]
+        print(nodes)
         # creating node references
         numNodes = len(nodes)
         nodesRef = []

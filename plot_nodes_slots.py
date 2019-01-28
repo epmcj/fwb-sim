@@ -25,6 +25,8 @@ for i in range(1, len(sys.argv), 2):
         inName = sys.argv[i+1]
     if sys.argv[i] == "-o":
         outDir = sys.argv[i+1]
+        if not outDir.endswith("/"):
+            outDir += "/"
 
 if inName is None:
     print("Missing input file (-i [FILE])")
@@ -46,7 +48,8 @@ with open(inName, "r") as inFile:
         ys   = []
         errs = []
         bws  = []
-        for bw in data["bws"]:
+        # for bw in data["bws"]:
+        for bw in data["coi"]:
             bws.append(bw)
             x   = []
             y   = []
@@ -68,8 +71,9 @@ with open(inName, "r") as inFile:
         ys   = [e for _,_,e,_ in temp]
         errs = [e for _,_,_,e in temp]
         legends = []
-        for bw in bws:
-            legends.append(get_legend(bw))
+        # for bw in bws:
+        #     legends.append(get_legend(bw))
+        legends = data["coi"]
         fname = outDir + prefix + "_tslots.png"
         plotter.plotMultLineChart(xs, ys, errs, legends, "Nodes", 
                                   "Number of timeslots", title=None, 

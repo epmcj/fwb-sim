@@ -5,7 +5,7 @@
 ##                                                                           ##
 ##  Auxiliary Tools. Contains:                                               ##
 ##  - function to calculate distance between two points                      ##
-##  - functions to distribute nodes (generate their 3d positions)            ##
+##  - functions to distribute nodes (generate their positions)               ##
 ##                                                                           ##
 ##  TODO:                                                                    ##
 ##                                                                           ##

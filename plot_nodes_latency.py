@@ -25,6 +25,8 @@ for i in range(1, len(sys.argv), 2):
         inName = sys.argv[i+1]
     if sys.argv[i] == "-o":
         outDir = sys.argv[i+1]
+        if not outDir.endswith("/"):
+            outDir += "/"
 
 if inName is None:
     print("Missing input file (-i [FILE])")

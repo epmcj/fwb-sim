@@ -104,7 +104,7 @@ class TelosB(Node):
 
     def recv_msg(self, recvMsg):
         # consume energy for the reception
-        # self.consume_rx_energy(recvTime)
+        self.consume_rx_energy(recvTime)
         self.recvdMsgsCounter += 1
         if not self.isSink:
             recvMsg.src = self.id
