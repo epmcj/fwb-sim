@@ -63,6 +63,9 @@ class TelosB(Node):
     def get_mode(self):
         return self.mode
 
+    def get_energy(self):
+        return self.energy
+
     def execute(self):
         currTime = self.clock.read()
         if currTime == self.get_next_slot():
@@ -102,7 +105,7 @@ class TelosB(Node):
     def finish_tx(self, sendTime):
         self.consume_tx_energy(sendTime)
 
-    def recv_msg(self, recvMsg):
+    def recv_msg(self, recvMsg, recvTime):
         # consume energy for the reception
         self.consume_rx_energy(recvTime)
         self.recvdMsgsCounter += 1

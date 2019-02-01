@@ -66,16 +66,16 @@ with open(inName, "r") as inFile:
     # reading node positions and network topology from the input file
     idata = json.load(inFile)
     for i in range(len(idata["network"])):
-        print("Executing Network {}".format(i + 1))
+        print("Executing Network ({})".format(i + 1))
         nodes    = idata["network"][0]["nodes"]
         topology = idata["network"][0]["topology"]
-        print(nodes)
+        # print(nodes)
         # creating node references
         numNodes = len(nodes)
         nodesRef = []
         for nid in range(len(nodes)):
             nodesRef.append(TelosB(nid, nodes[nid][0], nodes[nid][1], 
-                            float("inf"), nid == sinkid))
+                            0, nid == sinkid))
         # getting possible interference information (for the scheduler)
         canInterWith = get_possible_interference_info(nodes, 
                                                       CC2420Radio.txRange * coi)
@@ -103,7 +103,7 @@ with open(inName, "r") as inFile:
         sim.set_network_topology(topology)
         sim.set_channel_info(alpha, noise)
         sim.set_slot_size(ssize)
-        sim.set_data_collection(0, frameSize * ssize)
+        sim.set_data_collection(0, 2 * frameSize * ssize)
         sim.set_timeslot_schedule(tschedule)
         # running simulator
         sim.run(frames)
@@ -117,9 +117,14 @@ with open(inName, "r") as inFile:
         #                                                 node.recvdMsgsCounter, 
         #                                                 node.sentMsgsCounter,
         #                                                 node.get_outbox_len()))
-        avgLatency = sum(sim.nodes[sinkid].latencies) / \
-                        len(sim.nodes[sinkid].latencies)
-        errLatency = 1.96 * avgLatency / sqrt(len(sim.nodes[sinkid].latencies))
+        if (len(sim.nodes[sinkid].latencies) != 0):
+            avgLatency = sum(sim.nodes[sinkid].latencies) / \
+                            len(sim.nodes[sinkid].latencies)
+            errLatency = 1.96 * avgLatency / \
+                            sqrt(len(sim.nodes[sinkid].latencies))
+        else:
+            avgLatency = float("inf")
+            errLatency = float("inf")
         print("Latency: {} +- {}".format(avgLatency, errLatency))
         print("Data Collected: {}".format(sim.nodes[sinkid].recvdMsgsCounter))
         
@@ -130,10 +135,13 @@ with open(inName, "r") as inFile:
             "txs"               : sim.get_num_txs(),
             "txs_success"       : sim.get_num_rxs_successes(),
             "txs_failures"      : sim.get_num_rxs_failures(),
-            "sink_collections"  : sim.nodes[sinkid].recvdMsgsCounter
+            "sink_collections"  : sim.nodes[sinkid].recvdMsgsCounter,
+            "energy_consump"    : sim.get_energy_consumption()
         })
 
 if outName != None:
     with open(outName, "w") as outFile:
         json.dump(odata, outFile)
+else:
+    print(odata)
     

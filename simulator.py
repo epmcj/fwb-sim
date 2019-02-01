@@ -127,10 +127,17 @@ class Simulator:
     def get_num_rxs_failures(self):
         return self.failedRxs
 
+    def get_energy_consumption(self):
+        energy = 0
+        for node in self.nodes:
+            energy += node.get_energy()
+        return -energy
+
     def do_data_collection(self):
         # Method to generate new messages for the nodes.
         for node in self.nodes:
-            if node.energy > 0 and node.isSink is False:
+            # if node.energy > 0 and node.isSink is False:
+            if node.isSink is False:
                 node.collect_data()
         self.numDCollect += 1
 
@@ -245,7 +252,7 @@ class Simulator:
         self.evMngr.insert(EG.create_node_resume_event(ftime + 0.00001, src))
         # evaluating transmissions
         txid   = self.ongoingTxs
-        txInfo = [src, msg, self.nodes[src].radio.txPower]
+        txInfo = [src, msg, self.nodes[src].radio.txPower, ttime]
         self.txs.append([txid, txInfo, True])
         self.ongoingTxs += 1
         self.__evaluate_txs()
@@ -260,9 +267,10 @@ class Simulator:
                 tid, tinfo, tsuccess = self.txs.pop(i)
                 # if the transmission was successful
                 if tsuccess:
-                    msg = tinfo[1]
-                    dst = msg.dst
-                    self.nodes[dst].recv_msg(msg)
+                    msg   = tinfo[1]
+                    dst   = msg.dst
+                    ttime = tinfo[3]
+                    self.nodes[dst].recv_msg(msg, ttime)
                     self.succeedRxs += 1
                 else:
                     self.failedRxs += 1
