@@ -3,7 +3,7 @@
 ##  Departamento de Ciencia da Computacao (DCC)                              ##
 ##  Universidade Federal de Minas Gerais (UFMG)                              ##
 ##                                                                           ##
-##  [...]                                                                    ##
+##  FWB scheduler algorithm implementation.                                  ##
 ##                                                                           ##
 ##  TODO:                                                                    ##
 ##                                                                           ##

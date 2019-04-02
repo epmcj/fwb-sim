@@ -1,3 +1,14 @@
+###############################################################################
+##  Laboratorio de Engenharia de Computadores (LECOM)                        ##
+##  Departamento de Ciencia da Computacao (DCC)                              ##
+##  Universidade Federal de Minas Gerais (UFMG)                              ##
+##                                                                           ##
+##  Tests the FWB implementation.                                            ##
+##                                                                           ##
+##  TODO:                                                                    ##
+##                                                                           ##
+##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
+###############################################################################
 import sys
 import math
 import json
@@ -6,10 +17,6 @@ from radios     import CC2420Radio
 from telosb     import TelosB
 from tools      import get_possible_interference_info
 from fwb        import FWB
-
-##################################################################
-## E SE SLOTS DOS FILHOS FOSSEM MENOR QUE OS DOS PAIS ?
-##################################################################
 
 sinkid  = 0
 # noise   = 0

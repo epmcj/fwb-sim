@@ -1,3 +1,14 @@
+###############################################################################
+##  Laboratorio de Engenharia de Computadores (LECOM)                        ##
+##  Departamento de Ciencia da Computacao (DCC)                              ##
+##  Universidade Federal de Minas Gerais (UFMG)                              ##
+##                                                                           ##
+##  Tests nodes behaviour.                                                   ##
+##                                                                           ##
+##  TODO:                                                                    ##
+##                                                                           ##
+##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
+###############################################################################
 class Teste:
     def __init__(self):
         self.slots     = []

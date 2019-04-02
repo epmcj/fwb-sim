@@ -5,7 +5,8 @@
 ##                                                                           ##
 ##  Auxiliary Tools. Contains:                                               ##
 ##  - function to calculate distance between two points                      ##
-##  - functions to distribute nodes (generate their positions)               ##
+##  - functions to generate networks w/ different topologies                 ##
+##  - functions to estimate txs and interference                             ##
 ##                                                                           ##
 ##  TODO:                                                                    ##
 ##                                                                           ##

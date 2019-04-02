@@ -3,7 +3,7 @@
 ##  Departamento de Ciencia da Computacao (DCC)                              ##
 ##  Universidade Federal de Minas Gerais (UFMG)                              ##
 ##                                                                           ##
-##  [...]                                                                    ##
+##  FWBI (FWB + interference) scheduler algorithm implementation.            ##
 ##                                                                           ##
 ##  TODO:                                                                    ##
 ##                                                                           ##

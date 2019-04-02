@@ -3,13 +3,9 @@
 ##  Departamento de Ciencia da Computacao (DCC)                              ##
 ##  Universidade Federal de Minas Gerais (UFMG)                              ##
 ##                                                                           ##
-##  Simulator for underwater optical-acoustic networks.                      ##
+##  Simulator for wireless sensor networks with TDMA-system.                 ##
 ##                                                                           ##
 ##  TODO:                                                                    ##
-##  - insert verifications in set_topology                                   ##
-##  - implement fwb algorithm                                                ##
-##  - change timeslots attribution scheme                                    ##
-##  - implement how to simulate tranmsission w/ interference                 ##
 ##                                                                           ##
 ##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
 ###############################################################################
@@ -311,6 +307,8 @@ class Simulator:
             for isrc, ipos, ipower in nodesTxs:
                 if isrc != src:
                     dist = tools.distance(ipos, dpos)
+                    if dist == 0:
+                        dist = 0.0000001
                     inter += ipower / (dist ** self.channel.alpha)
             # calculating final SINR and checking for zero division (when there 
             # is neither interference nor noise)

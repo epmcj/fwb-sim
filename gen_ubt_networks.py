@@ -1,3 +1,14 @@
+###############################################################################
+##  Laboratorio de Engenharia de Computadores (LECOM)                        ##
+##  Departamento de Ciencia da Computacao (DCC)                              ##
+##  Universidade Federal de Minas Gerais (UFMG)                              ##
+##                                                                           ##
+##  Generates a unbalanced binary tree.                                      ##
+##                                                                           ##
+##  TODO:                                                                    ##
+##                                                                           ##
+##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
+###############################################################################
 import tools
 import sys
 import json

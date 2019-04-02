@@ -3,7 +3,8 @@
 ##  Departamento de Ciencia da Computacao (DCC)                              ##
 ##  Universidade Federal de Minas Gerais (UFMG)                              ##
 ##                                                                           ##
-##  [...]                                                                    ##
+##  Radio interface implementation for the simulator + CC2420-based          ##
+##  implementation.                                                          ##
 ##                                                                           ##
 ##  TODO:                                                                    ##
 ##                                                                           ##

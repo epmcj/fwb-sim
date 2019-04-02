@@ -1,3 +1,14 @@
+###############################################################################
+##  Laboratorio de Engenharia de Computadores (LECOM)                        ##
+##  Departamento de Ciencia da Computacao (DCC)                              ##
+##  Universidade Federal de Minas Gerais (UFMG)                              ##
+##                                                                           ##
+##  Tests the FWBI (FWB + interference) implementation.                      ##
+##                                                                           ##
+##  TODO:                                                                    ##
+##                                                                           ##
+##  Author: Eduardo Pinto (epmcj@dcc.ufmg.br)                                ##
+###############################################################################
 import sys
 import json
 from simulator  import Simulator
@@ -122,14 +133,18 @@ with open(inName, "r") as inFile:
                             len(sim.nodes[sinkid].latencies)
             errLatency = 1.96 * avgLatency / \
                             sqrt(len(sim.nodes[sinkid].latencies))
+            maxLatency = max(sim.nodes[sinkid].latencies)
         else:
             avgLatency = float("inf")
             errLatency = float("inf")
-        print("Latency: {} +- {}".format(avgLatency, errLatency))
+            maxLatency = float("inf")
+        print("Avg Latency: {} +- {}".format(avgLatency, errLatency))
+        print("Max Latency: {}".format(maxLatency))
         print("Data Collected: {}".format(sim.nodes[sinkid].recvdMsgsCounter))
         
         odata["results"].append({
             "num_slots"         : frameSize,
+            "max_latency"       : maxLatency,
             "avg_latency"       : avgLatency,
             "err_latency"       : errLatency,
             "txs"               : sim.get_num_txs(),

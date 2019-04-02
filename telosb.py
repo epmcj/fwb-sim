@@ -3,7 +3,7 @@
 ##  Departamento de Ciencia da Computacao (DCC)                              ##
 ##  Universidade Federal de Minas Gerais (UFMG)                              ##
 ##                                                                           ##
-##  Node base implementation.                                                ##
+##  TelosB-based node implementation.                                        ##
 ##                                                                           ##
 ##  TODO:                                                                    ##
 ##                                                                           ##

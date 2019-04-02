@@ -1,17 +1,30 @@
 Para simular as transmissões de dados nas redes, utilizamos um modelo físico em baseado no SINR (Signal-to-Noise-plus-Interference Ratio).
 Assim, um pacote transmitido pode ser decodificado se o SINR no receptor for maior do que \Beta
-    SINR  =  Pu / d(u,v)**\alpha / (N + \sum {w \in V \\ {u}} (Pw / d(w, v)**\alpha)) >= \Beta
-sendo
-Pu          := potencia de transmissão do no u
-d(u,v)      := distância entre nos u e v mínima entre um nó pai e um filho
-\alpha      := expoente de path-loss
-\Beta       := SIN mínimo
-N           := ruido
-\sum [...]  := interferência
+
+    SINR  =  Pu / d(u,v)^\alpha / (N + \sum {w \in V \\ {u}} (Pw / d(w, v)^\alpha)) >= \Beta
+
+sendo,
+
+    Pu          := potencia de transmissão do no u
+
+    d(u,v)      := distância entre nos u e v mínima entre um nó pai e um filho
+
+    \alpha      := expoente de path-loss
+
+    \Beta       := SIN mínimo
+
+    N           := ruido
+
+    \sum [...]  := interferência
+
+---
 
 Para as simulações, utilizou-se:
+
 \Beta  = 1
+
 \alpha = 3
+
 N      = P / (2 * \Beta * (2 * Rtx)**\alpha) [baseado em "Local Broadcasting in the Physical Interference Model"]
 
 Parâmetros baseados no rádio CC2420:
@@ -19,7 +32,8 @@ Parâmetros baseados no rádio CC2420:
     P := Potência de transmissão (= 0 dBm)
     Taxa de transmissão = 250 kbps
 
-* Para simular diferentes larguras de banda, associamos a taxa de transmissão de 250 kbps à menor delas e aumentamos essa taxa de forma proporcional ao aumento da largura de banda.
+---
+Para simular diferentes larguras de banda, associamos a taxa de transmissão de 250 kbps à menor delas e aumentamos essa taxa de forma proporcional ao aumento da largura de banda.
 Por exemplo, 
 -  2 MHz => 250 kbps
 -  4 MHz => 500 kbps
@@ -28,9 +42,11 @@ Por exemplo,
 
 FWBI utiliza um UDG para representar a interferência na rede e assim distribuir os timeslots. 
 O alcance de interferência (Ri) é dado por
+
     Ri = Rx * i
+
 sendo
-i := coeficiente de interferência
+    i := coeficiente de interferência
 
 Geração de Redes para Testes:
 - Árvores Binárias Balanceadas de altura $l$ foram geradas da forma descrita a seguir.

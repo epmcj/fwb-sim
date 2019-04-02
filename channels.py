@@ -3,8 +3,7 @@
 ##  Departamento de Ciencia da Computacao (DCC)                              ##
 ##  Universidade Federal de Minas Gerais (UFMG)                              ##
 ##                                                                           ##
-##  Implementation of both acoustic and optical channels used in the         ##
-##  simulator.                                                               ##
+##  Implementation of rf channel used in the simulator.                      ##
 ##                                                                           ##
 ##  TODO:                                                                    ##
 ##                                                                           ##
